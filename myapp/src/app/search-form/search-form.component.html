@@ -1,0 +1,637 @@
+<!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCRN8JExWAfJ7Cqg8eMVGIrK-13UMbAS-0&libraries=places"></script>
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"> -->
+
+
+
+<!-- THE SEARCH FORM -->
+<div class="card card-body bg-light container mt-2 container">
+    <h5 style="text-align: center" class="form-group">Travel and Entertainment Search</h5>
+    <form (ngSubmit)="onSubmit()" #searchForm="ngForm" class="container">
+        <!-- KEYWORD -->
+        <div class="form-group row">
+            <div class="col-md-2 offset-md-2">
+                <label for="keyword">Keyword<span style="color:red">*</span></label>
+            </div>
+            <div class="col-md-6">
+                <!-- <input required ngModel name="keyword" #keyword="ngModel" (change)="log(keyword)" type="text" id="keyword" class="form-control"> -->
+                <input type="text" class="form-control" name="keyword" id="keyword" [(ngModel)]="model.keyword" #keyword="ngModel" [ngStyle]="{'border' : keyword.touched && (keyword.pristine || keyword.value.trim() === '') ? '2px solid red' : ''}" #spy>
+                <div *ngIf="keyword.touched && (keyword.pristine || keyword.value.trim() === '')" class="myalert">Please enter a keyword.</div>
+                <!-- <br>{{spy.className}} -->
+            </div>
+        </div>
+        <!-- CATEGORY -->
+        <div class="form-group row">
+            <div class="col-md-2 offset-md-2">
+                <label for="category">Category</label>
+            </div>
+            <div class="col-md-4">
+                <select class="form-control" name="category" id="category" [(ngModel)]="selectedOption.value" #category="ngModel">
+                <!-- <select class="form-control" name="category" id="category" [(ngModel)]="selectedOption"> -->
+                    <option *ngFor="let category of categories" [value]="category.value" [selected]="category.value == selectedOption.value">{{ category.display }}</option>
+                    <!-- <option *ngFor="let category of categories" [value]="category.value" >{{ category.display }}</option> -->
+                    <!-- <option *ngFor="let category of categories" [value]="category.value">{{ category.display }}</option> -->
+                </select>
+            </div>
+        </div>
+        <!-- DISTANCE -->
+        <div class="form-group row">
+            <div class="col-md-2 offset-md-2">
+                <label for="">Distance (miles)</label>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control" placeholder="10" name="distance" [(ngModel)]="model.distance">
+            </div>
+        </div>
+        <!-- LOCATION -->
+        <fieldset class="form-group">
+            <div class="row">
+                <legend class="col-form-label col-sm-2 pt-0 offset-md-2">From<span style="color:red">*</span></legend>
+                <div class="col-sm-6">
+                    <!-- CURRENT LOCATION -->
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="location" id="currentLoc" value="" [checked]="currentBtn" (click)="disableLocBox()">
+                        <label class="form-check-label" for="currentLoc">Current location</label>
+                    </div>
+                    <!-- OTHER LOCATION -->
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="location" id="otherLoc" value="" [checked]="otherBtn" (click)="enableLocBox()">
+                        <label class="form-check-label" for="otherLoc">Other. Please specify:</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-control" type="text" placeholder="Enter a location" disabled [hidden]="otherBtn">
+
+                        <!-- <input class="form-control" type="text" name="locBox" id="locBox" placeholder="Enter a location" [disabled]="!otherBtn" [(ngModel)]="model.locText" #locText="ngModel" required [hidden]="currentBtn" [ngStyle]="{'border' : (submitWithEmptyLocText && locText.pristine) || (locText.touched && (locText.pristine || locText.value.trim() === '')) ? '2px solid red' : ''}" #spy2> -->
+                        <input class="form-control" type="text" name="locText" placeholder="Enter a location" [disabled]="currentBtn" [(ngModel)]="model.locText" #locText2 #locText="ngModel" [hidden]="currentBtn" [ngStyle]="{'border' : (submitWithEmptyLocText && locText.pristine) || (locText.touched && (locText.pristine || locText.value.trim() === '')) ? '2px solid red' : ''}" #spy2>
+                        <div *ngIf="submitWithEmptyLocText && locText.pristine || (otherBtn && locText.touched && (locText.pristine || locText.value.trim() === ''))" class="myalert" #alert>Please enter a location.</div>
+                        <!-- <div *ngIf="locText.pristine">locText2 is pristine</div> -->
+                        <!-- <br>{{spy2.className}} -->
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <!-- SUBMIT BUTTON -->
+        <button type="submit" class="btn btn-primary offset-md-2" [disabled]="!alreadyGetCurrentLoc || keyword.value === null || (keyword.value.trim() === '') || (otherBtn && (locText2.pristine || locText2.value.trim() === ''))">
+            <span class="fa fa-search"></span> Search
+        </button>
+        <!-- CLEAR BUTTON -->
+        <input type="button" class="btn btn-light " value="Clear" (click)="searchForm.reset();formReset();">
+
+    </form>
+</div>
+
+<!-- RESULT/FAVORITES BUTTONS -->
+<div class="row justify-content-center" style="padding-top: 1%">
+    <!-- <input type="button" class="btn btn-primary" id="results" value="Results" (click)="enableResult()"> -->
+    <input type="button" [ngClass]="(showFavorite) ? 'btn btn-light text-primary' : 'btn btn-primary'" id="results" value="Results" (click)="enableResult()">
+    <!-- <input type="button" class="btn btn-light text-primary" id="favorites" value="Favorites" (click)="enableFavorite()"> -->
+    <input type="button" [ngClass]="(showFavorite) ? 'btn btn-primary' : 'btn btn-light text-primary'" id="favorites" value="Favorites" (click)="enableFavorite()">
+</div>
+<!-- PROGRESS BAR (loading) -->
+<div class="col-md-10 offset-md-1">
+    <!-- <div class="progress" [hidden]="!submitted || gotZeroResult || gotNearbyData"> -->
+    <div class="progress" [hidden]="!loading">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100" style="width: 50%"></div>
+    </div>
+</div>
+<!-- NO RECORDS -->
+<div class="col-md-10 offset-md-1">
+    <div class="alert alert-warning col-md-10 offset-md-1" role="alert" [hidden]="!gotZeroResult">
+        No records.
+    </div>
+</div>
+<!-- FAILED TO GET SEARCH RESULTS -->
+<div class="col-md-10 offset-md-1">
+    <div class="alert alert-danger col-md-10 offset-md-1" role="alert" [hidden]="!gotFailedSearch">
+        Failed to get search results.
+    </div>
+</div>
+
+
+<!-- OUTPUT TABLE (first page)-->
+<div [@searchListAnimation]="searchListAnimState"  [hidden]="searchListAnimState == 'out' || !showFirstPage || showFavorite || showDetails">
+    <!-- <div *ngIf="gotNearbyData" class="col-md-10 offset-md-1 outputTable table-hover" [hidden]="!showFirstPage"> -->
+    <div *ngIf="gotNearbyData" class="col-md-10 offset-md-1 outputTable">
+        <!-- DETAILS BUTTON -->
+        <div class="container">
+            <button class="btn btn-light float-right mb-2" [hidden]="!showFirstPage" [disabled]="!detailsReady" (click)="enableLoadedDetails()">Details <span class="fa fa-chevron-right"></span></button>
+        </div>
+        <!-- TABLE -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Address</th>
+                        <th scope="col">Favorite</th>
+                        <th scope="col">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- <tr *ngFor="let place of result.page0.results; index as i" [ngClass]="currentPage == 'page0' && currentRow == i ? 'myTable-warning' : ''"> -->
+                    <tr *ngFor="let place of result.page0.results; index as i" [ngClass]="place.place_id == currentSelectedId ? 'myTable-warning' : ''">
+                        <td>{{i + 1}}</td>
+                        <td><img src={{place.icon}} style="width:35px"></td>
+                        <td>{{place.name}}</td>
+                        <td>{{place.vicinity}}</td>
+                        <td>
+                            <button type="button" class="btn btn-light" (click)="clickedStar(place.icon, place.name, place.vicinity, place.place_id)">
+                                <span class="fa fa-star-o" [hidden]="favoriteListDict[place.place_id]"></span>
+                                <span class="fa fa-star" style="color:orange" [hidden]="!favoriteListDict[place.place_id]"></span>
+                            </button>
+                        </td>
+                        <td><button type="button" class="btn btn-light" (click)="goGetDetails('page0', i, place.place_id)"><span class="fa fa-chevron-right"></span></button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <!-- NEXT PAGE BUTTON -->
+        <div class="row">
+            <button *ngIf="result.page1" type="button" class="btn btn-light col-centered" (click)="goToSecondPage()">Next</button>
+        </div>
+    </div>
+</div>
+<!-- OUTPUT TABLE (second page)-->
+<div [@searchListAnimation]="searchListAnimState"  [hidden]="searchListAnimState == 'out' || !showSecondPage || showFavorite || showDetails">
+    <!-- <div *ngIf="gotNearbyData && result.page1" class="col-md-10 offset-md-1 outputTable table-hover" [hidden]="!showSecondPage"> -->
+    <div *ngIf="gotNearbyData && result.page1" class="col-md-10 offset-md-1 outputTable table-hover">
+        <!-- DETAILS BUTTON -->
+        <div class="container">
+            <button class="btn btn-light float-right mb-2" [hidden]="!showSecondPage" [disabled]="!detailsReady" (click)="enableLoadedDetails()">Details <span class="fa fa-chevron-right"></span></button>
+        </div>
+        <!-- TABLE -->
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Favorite</th>
+                    <th scope="col">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- <tr *ngFor="let place of result.page1.results; index as i" [ngClass]="currentPage == 'page1' && currentRow == i ? 'myTable-warning' : ''"> -->
+                <tr *ngFor="let place of result.page1.results; index as i" [ngClass]="place.place_id == currentSelectedId ? 'myTable-warning' : ''">
+                    <td>{{i + 1}}</td>
+                    <td><img src={{place.icon}} style="width:35px"></td>
+                    <td>{{place.name}}</td>
+                    <td>{{place.vicinity}}</td>
+                    <td>
+                        <button type="button" class="btn btn-light" (click)="clickedStar(place.icon, place.name, place.vicinity, place.place_id)">
+                            <span class="fa fa-star-o" [hidden]="favoriteListDict[place.place_id]"></span>
+                            <span class="fa fa-star" style="color:orange" [hidden]="!favoriteListDict[place.place_id]"></span>
+                        </button>
+                    </td>
+                    <td><button type="button" class="btn btn-light" (click)="goGetDetails('page1', i, place.place_id)"><span class="fa fa-chevron-right"></span></button></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="btn-toolbar">
+            <button type="button" class="btn btn-light  btn-secondary mr-2" (click)="goToFirstPage()">Previous</button>
+            <button *ngIf="result.page2" type="button" class="btn btn-light btn-secondary" (click)="goToThirdPage()">Next</button>
+        </div>
+    </div>
+</div>
+<!-- OUTPUT TABLE (third page)-->
+<div [@searchListAnimation]="searchListAnimState"  [hidden]="searchListAnimState == 'out' || !showThirdPage || showFavorite || showDetails">
+    <!-- <div *ngIf="gotNearbyData && result.page2" class="col-md-10 offset-md-1 outputTable table-hover" [hidden]="!showThirdPage"> -->
+    <div *ngIf="gotNearbyData && result.page2" class="col-md-10 offset-md-1 outputTable table-hover" >
+        <!-- DETAILS BUTTON -->
+        <div class="container">
+            <button class="btn btn-light float-right mb-2" [hidden]="!showThirdPage" [disabled]="!detailsReady" (click)="enableLoadedDetails()">Details <span class="fa fa-chevron-right"></span></button>
+        </div>
+        <!-- TABLE -->
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Favorite</th>
+                    <th scope="col">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- <tr *ngFor="let place of result.page2.results; index as i" [ngClass]="currentPage == 'page2' && currentRow == i ? 'myTable-warning' : ''"> -->
+                <tr *ngFor="let place of result.page2.results; index as i" [ngClass]="place.place_id == currentSelectedId ? 'myTable-warning' : ''">
+                    <td>{{i + 1}}</td>
+                    <td><img src={{place.icon}} style="width:35px"></td>
+                    <td>{{place.name}}</td>
+                    <td>{{place.vicinity}}</td>
+                    <td>
+                        <button type="button" class="btn btn-light" (click)="clickedStar(place.icon, place.name, place.vicinity, place.place_id)">
+                            <span class="fa fa-star-o" [hidden]="favoriteListDict[place.place_id]"></span>
+                            <span class="fa fa-star" style="color:orange" [hidden]="!favoriteListDict[place.place_id]"></span>
+                        </button>
+                    </td>
+                    <td><button type="button" class="btn btn-light" (click)="goGetDetails('page2', i, place.place_id)"><span class="fa fa-chevron-right"></span></button></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="row">
+            <button type="button" class="btn btn-light col-centered" (click)="goToSecondPage()">Previous</button>
+        </div>
+    </div>
+</div>
+
+<!-- OUTPUT FAVORITE -->
+<!-- <div class="container" [hidden]="!showFavorite"> -->
+<div class="container" [@searchListAnimation]="searchListAnimState" [hidden]="searchListAnimState == 'out' || !showFavorite">
+    <!-- ZERO FAVORITE -->
+    <div *ngIf="lenOfFavoriteList == 0" class="alert alert-warning" role="alert">
+        No records.
+    </div>
+    <!-- FAVORITE LIST -->
+    <div *ngIf="lenOfFavoriteList != 0">
+        <!-- DETAILS BUTTON -->
+        <div class="row">
+            <div class="col-12">
+                <button class="btn btn-light float-right mb-2" [disabled]="!detailsReady" (click)="enableLoadedDetails()">Details <span class="fa fa-chevron-right"></span></button>
+            </div>
+        </div>
+        <!-- TABLE -->
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Favorite</th>
+                    <th scope="col">Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- <tr *ngFor="let place of result.page0.results; index as i" [ngClass]="currentPage == 'page0' && currentRow == i ? 'myTable-warning' : ''"> -->
+                <tr *ngFor="let place of displayFavoriteList; index as i" [ngClass]="place.place_id == currentSelectedId ? 'myTable-warning' : ''">
+                    <td>{{i + 1}}</td>
+                    <td><img src={{place.icon}} style="width:35px"></td>
+                    <td>{{place.name}}</td>
+                    <td>{{place.vicinity}}</td>
+                    <!-- <td><button type="button" class="btn btn-light" (click)="removeFromFavorite(place.place_id)"><span class="fa fa-trash"></span></button></td> -->
+                    <td><button type="button" class="btn btn-light" (click)="clickedStar(place.icon, place.name, place.vicinity, place.place_id)"><span class="fa fa-trash"></span></button></td>
+                    <td><button type="button" class="btn btn-light" (click)="goGetDetails('favorite', i, place.place_id)"><span class="fa fa-chevron-right"></span></button></td>
+                </tr>
+            </tbody>
+        </table>
+        <!-- PAGE BUTTON -->                    
+        <div *ngIf="favoritePageButton == 'next'" class="row">
+            <button  type="button" class="btn btn-light col-centered" (click)="goToNextFavorite()">Next</button>
+        </div>
+        <div *ngIf="favoritePageButton == 'previousAndNext'" class="btn-toolbar">
+            <button type="button" class="btn btn-light  btn-secondary mr-2" (click)="goToPreviousFavorite()">Previous</button>
+            <button  type="button" class="btn btn-light btn-secondary" (click)="goToNextFavorite()">Next</button>
+        </div>
+        <div *ngIf="favoritePageButton == 'previous'" class="row">
+            <button type="button" class="btn btn-light col-centered" (click)="goToPreviousFavorite()">Previous</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- HELPER TO CALL THE GOOGLE CLIENT SIDE LIBRARY -->
+<div #serviceHelper></div>
+
+<!-- SHOWING PLACES DETAILS -->
+<div [@detailsAnimation]="detailsAnimState"  [hidden]="detailsAnimState == 'out'">
+    <!-- <div *ngIf="detailsReady" class="container details" [hidden]="!showDetails"> -->
+    <div *ngIf="detailsReady" class="container details">
+        <!-- TITTLE -->
+        <h5 style="text-align: center">{{ rowDetails.name }}</h5>
+        <!-- BACK BUTTON, FAVORITE BUTTON (STAR), TWITTER BUTTON -->
+        <div>
+            <button type="button" class="btn btn-light " (click)="goBackToSearchList()"><span class="fa fa-chevron-left"></span> List</button>
+            <!-- <button type="button" class="btn btn-light" style="width:40px; height:40px"><span class="fa fa-star-o"></span></button> -->
+            <button type="button" class="btn btn-light twitter float-right ml-2" style="width:36px; height:36px" (click)="setUpTwitterUrl(rowDetails.name, rowDetails.formatted_address, rowDetails.website, rowDetails.url)">
+                <a href="{{twitterUrl}}">
+                    <img src="http://cs-server.usc.edu:45678/hw/hw8/images/Twitter.png" style="width:102%; height:100%;">
+                </a>
+            </button>
+            <button type="button" class="btn btn-light float-right" (click)="clickedStar(rowDetails.icon, rowDetails.name, rowDetails.vicinity, rowDetails.place_id)" style="height:36px">
+                <span class="fa fa-star-o" [hidden]="favoriteListDict[rowDetails.place_id]"></span>
+                <span class="fa fa-star" style="color:orange" [hidden]="!favoriteListDict[rowDetails.place_id]"></span>
+            </button>
+        </div>
+        <!-- NAV TAB -->
+        <nav style="margin-top:1em">
+            <div class="nav nav-tabs justify-content-end" id="nav-tab" role="tablist">
+                <a class="nav-item nav-link {{showTab == 'info' ? 'active' : ''}}" (click)="enableInfoTab()" id="nav-info-tab" data-toggle="tab" href="#nav-info" role="tab" aria-controls="nav-info" aria-selected="showTab == 'info'">Info</a>
+                <a class="nav-item nav-link {{showTab == 'photos' ? 'active' : ''}}" (click)="enablePhotosTab()" id="nav-photos-tab" data-toggle="tab" href="#nav-photos" role="tab" aria-controls="nav-photos" aria-selected="showTab == 'photos'">Photos</a>
+                <a class="nav-item nav-link {{showTab == 'map' ? 'active' : ''}}" (click)="enableMapTab()" id="nav-map-tab" data-toggle="tab" href="#nav-map" role="tab" aria-controls="nav-map" aria-selected="showTab == 'map'">Map</a>
+                <a class="nav-item nav-link {{showTab == 'reviews' ? 'active' : ''}}" (click)="enableReviewsTab()" id="nav-reviews-tab" data-toggle="tab" href="#nav-reviews" role="tab" aria-controls="nav-reviews" aria-selected="showTab == 'reviews'">Reviews</a>
+            </div>
+        </nav>
+        <!-- NAV CONTENT -->
+        <div class="tab-content" id="nav-tabContent">
+            <!-- INFO -->
+            <div class="tab-pane fade {{showTab == 'info' ? 'show active' : ''}}" id="nav-info" role="tabpanel">
+                <div>
+                    <table class="table table-striped table-hover">
+                        <tbody>
+                            <!-- Address -->
+                            <tr *ngIf="rowDetails.formatted_address">
+                                <td><b>Address</b></td>
+                                <td>{{rowDetails.formatted_address}}</td>
+                            </tr>
+                            <!-- Phone Number -->
+                            <tr *ngIf="rowDetails.international_phone_number">
+                                <td><b>Phone Number</b></td>
+                                <td>{{rowDetails.international_phone_number}}</td>
+                            </tr>
+                            <!-- Price Level -->
+                            <tr *ngIf="rowDetails.price_level">
+                                <td><b>Price Level</b></td>
+                                <td><span *ngFor="let i of [0, 1, 2, 3, 4]"><span *ngIf="i < rowDetails.price_level" class="fa fa-usd"></span></span></td>
+                            </tr>
+                            <!-- Rating -->
+                            <tr *ngIf="rowDetails.rating" (mouseenter)="mouseEnterRating()" (mouseleave)="mouseLeaveRating()">
+                                <td><b>Rating</b></td>
+                                <!-- <td>{{rowDetails.rating}}<span></span></td> -->
+                                <td>
+                                    <span>{{rowDetails.rating}}</span>
+                                    <span style="position:relative; width:5.6em; height:1.2em;">
+                                        <span class="fa fa-star" style="color: orange;"></span>
+                                        <span class="fa fa-star" style="color: orange;"></span>
+                                        <span class="fa fa-star" style="color: orange;"></span>
+                                        <span class="fa fa-star" style="color: orange;"></span>
+                                        <span class="fa fa-star" style="color: orange;"></span>
+                                        <div *ngIf="ratingBaseColor == 'white'" style="position:absolute; height:100%; top:0; right:-0.2em" [style.width.%]="ratingPercentage" [ngStyle]="{'background' : mouseInRatingRow ? 'rgb(236, 236, 236)' : 'white'}"></div>
+                                        <div *ngIf="ratingBaseColor == 'rgb(242, 242, 242)'" style="position:absolute; height:100%; top:0; right:-0.2em" [style.width.%]="ratingPercentage" [ngStyle]="{'background' : mouseInRatingRow ? 'rgb(236, 236, 236)' : 'rgb(242, 242, 242)'}"></div>
+                                    </span>
+                                </td>
+                            </tr>
+                            <!-- Google Page -->
+                            <tr *ngIf="rowDetails.url">
+                                <td><b>Google Page</b></td>
+                                <td><a href="{{rowDetails.url}}" target="_blank">{{rowDetails.url}}</a></td>
+                            </tr>
+                            <!-- Website -->
+                            <tr *ngIf="rowDetails.website">
+                                <td><b>Website</b></td>
+                                <td><a href="{{rowDetails.website}}" target="_blank">{{rowDetails.website}}</a></td>
+                            </tr>
+                            <!-- Hours -->
+                            <tr *ngIf="rowDetails.opening_hours">
+                                <td><b>Hours</b></td>
+                                <td>
+                                    <span *ngIf="rowDetails.opening_hours.open_now; else closed">
+                                        Open now:&nbsp;&nbsp;{{ todayHour }}
+                                    </span>
+                                    <ng-template #closed>Closed&nbsp;&nbsp;</ng-template>
+                                    <!-- Button to Open the Modal -->
+                                    <a href="#myModal" data-toggle="modal" data-target="#myModal">Daily open hours</a>
+                                        <!-- The Modal -->
+                                        
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- PHOTOS -->
+            <div class="tab-pane fade {{showTab == 'photos' ? 'show active' : ''}}" id="nav-photos" role="tabpanel">
+                <!-- NO RECORDS -->
+                <div *ngIf="!rowDetails.photos">
+                    <div class="alert alert-warning col-md-10 offset-md-1" role="alert">
+                        No records.
+                    </div>
+                </div>
+                <!-- <div class="card-columns">
+                    <div *ngFor="let photo of rowDetails.photos" class="card">
+                        <div class="card-body card-body-photo">
+                            <a href="{{ photo.getUrl({'maxWidth' : photo.width}) }}" target="_blank">
+                                <img src="{{ photo.getUrl({'maxWidth' : photo.width}) }}" width="100%">
+                            </a>
+                        </div>
+                    </div>
+                </div> -->
+                <div class="row">
+                    <div class="col-md-3 myPhotoCol">
+                        <div *ngFor="let photo of photoCol0" class="myPhotoCard">
+                            <a href="{{ photo.getUrl({'maxWidth' : photo.width}) }}" target="_blank">
+                                <img src="{{ photo.getUrl({'maxWidth' : photo.width}) }}" width="100%">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3 myPhotoCol">
+                        <div *ngFor="let photo of photoCol1" class="myPhotoCard">
+                            <a href="{{ photo.getUrl({'maxWidth' : photo.width}) }}" target="_blank">
+                                <img src="{{ photo.getUrl({'maxWidth' : photo.width}) }}" width="100%">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3 myPhotoCol">
+                        <div *ngFor="let photo of photoCol2" class="myPhotoCard">
+                            <a href="{{ photo.getUrl({'maxWidth' : photo.width}) }}" target="_blank">
+                                <img src="{{ photo.getUrl({'maxWidth' : photo.width}) }}" width="100%">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3 myPhotoCol">
+                        <div *ngFor="let photo of photoCol3" class="myPhotoCard">
+                            <a href="{{ photo.getUrl({'maxWidth' : photo.width}) }}" target="_blank">
+                                <img src="{{ photo.getUrl({'maxWidth' : photo.width}) }}" width="100%">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- MAP -->
+            <div class="tab-pane fade {{showTab == 'map' ? 'show active' : ''}}" id="nav-map" role="tabpanel">
+                <!-- FROM, TO, TRAVEL MODE -->
+                <div class="container">
+                    <form (ngSubmit)="onSubmitMap()" #mapForm="ngForm">
+                        <div class="row">
+                            <!-- FROM FIELD -->
+                            <div class="col-md-4">
+                                <label for="from">From</label>
+                                <input type="text" class="form-control ml-2 mr-2" [(ngModel)]="from" name="from" id="from" value="{{ from }}" #fromText>
+                            </div>
+                            <!-- TO FIELD -->
+                            <div class="col-md-4">
+                                <label>To</label>
+                                <input type="text" class="form-control mr-2" value="{{ nameAndAddress }}" disabled style="font-weight:500">
+                            </div>
+                            <!-- TRAVEL MODE -->
+                            <div class="col-md-2">
+                                <label for="travelMode">Travel Mode</label>
+                                <select class="form-control mr-2" name="travelMode" id="travelMode" [(ngModel)]="travelMode">
+                                    <option value="DRIVING">Driving</option>
+                                    <option value="BICYCLING">Bicycling</option>
+                                    <option value="TRANSIT">Transit</option>
+                                    <option value="WALKING">Walking</option>
+                                </select>
+                            </div>
+                            <!-- SUBMIT -->
+                            <div class="col-md-2 float-right">
+                                <p style="margin-bottom:7px">&nbsp;</p>
+                                <button type="submit" class="btn btn-primary" name="submit" id="submit" [disabled]="from == '' || from.trim() == ''">Get Directions</button>
+                            </div>
+                        </div>
+
+                        <!-- <div class="row mt-2">                              
+                            <div class="col-4">From</div>
+                            <div class="col-4">To</div>
+                            <div class="col-4">Travel Mode</div>
+                        </div>
+                        <div class="row">
+                            FROM FIELD
+                            <input type="text" class="form-control col-4 ml-2 mr-2" [(ngModel)]="from" name="from" id="from" value="{{ from }}" #fromText>
+                            TO FIELD
+                            <input type="text" class="form-control col-4 mr-2" value="{{ nameAndAddress }}" disabled style="font-weight:500">
+                            TRAVEL MODE
+                            <select class="form-control col-2 mr-2" name="travelMode" id="travelMode" [(ngModel)]="travelMode">
+                                <option value="DRIVING">Driving</option>
+                                <option value="BICYCLING">Bicycling</option>
+                                <option value="TRANSIT">Transit</option>
+                                <option value="WALKING">Walking</option>
+                            </select>
+                            SUBMIT
+                            <button type="submit" class="btn btn-primary ml-3" [disabled]="from == '' || from.trim() == ''">Get Directions</button>
+                        </div> -->
+                    </form>
+                    <div>
+                        <button type="button" class="btn btn-light mt-2 mb-2" id="pegman" (click)="toggleStreetView()">
+                            <img style="width: 100%" #pegman>
+                        </button>
+                    </div>
+                </div>
+                <!-- MAP CONTAINER -->
+                <!-- create the map when 'map' tab is clicked -->
+                <div *ngIf="showTab == 'map'">
+                    <div #myMap id="myMap"></div>
+                    <div #panel></div>
+                </div>
+            </div>
+            <!-- REVIEWS -->
+            <div class="tab-pane fade {{showTab == 'reviews' ? 'show active' : ''}}" id="nav-reviews" role="tabpanel">
+                <div class="btn-toolbar reviewBtnBar">
+                    <!-- REVIEWS SOURCE DROPDOWN -->
+                    <div class="dropdown btn-group mr-2">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="reviewsSource" data-toggle="dropdown">
+                            {{ currentReviewsSource }}
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            <a class="dropdown-item" (click)="enableGoogleReviews()">Google Reviews</a>
+                            <a class="dropdown-item" (click)="enableYelpReviews()">Yelp Reviews</a>
+                        </div>
+                    </div>
+                    <!-- REVIEWS ORDER DROPDOWN -->
+                    <div class="dropdown btn-group">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="reviewsOrder" data-toggle="dropdown">
+                            {{ currentReviewsOrder }}
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            <a class="dropdown-item" (click)="enableDefaultOrder()">Default Order</a>
+                            <a class="dropdown-item" (click)="enableHighestRatingOrder()">Highest Rating</a>
+                            <a class="dropdown-item" (click)="enableLowestRatingOrder()">Lowest Rating</a>
+                            <a class="dropdown-item" (click)="enableMostRecentOrder()">Most Recent</a>
+                            <a class="dropdown-item" (click)="enableLeastRecentOrder()">Least Recent</a>
+                        </div>
+                    </div>
+                </div>
+                <!-- REVIEWS CONTENT -->
+                <div [@reviewsAnimation]="reviewsAnimState">
+                    <!-- NO RECORDS -->
+                    <div *ngIf="reviewsObjectArray.length == 0">
+                        <div class="alert alert-warning col-md-10 offset-md-1" role="alert">
+                            No records.
+                        </div>
+                    </div>
+                    <!-- GOOGLE REVIEWS -->
+                    <div *ngIf="currentReviewsSource == 'Google Reviews'">
+                        <div class="card mt-2" *ngFor="let review of reviewsObjectArray; index as idx">
+                            <div class="card-body row" >
+                                <!-- PROFILE PHOTO -->
+                                <div class="col-sm-1">
+                                    <!-- If there's an author_url, make the "photo" clickable -->
+                                    <a *ngIf="review.author_url" href="{{ review.author_url }}" target="_blank">
+                                        <img *ngIf="review.profile_photo_url" src="{{ review.profile_photo_url }}" style="width:40px;">
+                                    </a>
+                                    <!-- otherwise, just show in plain photo -->
+                                    <img *ngIf="!review.author_url && review.profile_photo_url" src="{{ review.profile_photo_url }}" style="width:100%">
+                                </div>
+                                <!-- NAME, RATING, TIME, TEXT -->
+                                <div class="col-11">
+                                    <div>
+                                        <!-- If there's an author_url, make the "name" clickable -->
+                                        <a *ngIf="review.author_url" href="{{ review.author_url }}" target="_blank">{{ review.author_name }}</a>
+                                        <!-- otherwise, just show in plain text -->
+                                        <a *ngIf="!review.author_url" target="_blank">{{ review.author_name }}</a>
+                                    </div>
+                                    <span *ngFor="let i of [0, 1, 2, 3, 4, 5]">
+                                        <span *ngIf="i < review.rating" class="fa fa-star" style="color: orange;" ></span>
+                                    </span>
+                                    <span style="color:gray">&nbsp;{{ reviewsTimeArray[idx] }}</span>
+                                    <div>{{ review.text }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- YELP REVIEWS -->
+                    <div *ngIf="currentReviewsSource == 'Yelp Reviews'">
+                        <div class="card mt-2" *ngFor="let review of reviewsObjectArray; index as idx">
+                            <div class="card-body row" >
+                                <!-- PROFILE PHOTO -->
+                                <div class="col-1">
+                                    <div>
+                                        <a *ngIf="review.user && review.user.image_url && review.url" href="{{ review.url }}" target="_blank">
+                                            <img src="{{ review.user.image_url }}" style="width: 40px; height:40px; border-radius: 50%">
+                                        </a>
+                                        <img *ngIf="review.user && review.user.image_url && !review.url" style="width: 27px; height:27px; border-radius: 50%">
+                                    </div>
+                                </div>
+                                <!-- NAME, RATING, TIME, TEXT -->
+                                <div class="col-11">
+                                    <div>
+                                        <a *ngIf="review.user" href="{{ review.url }}" target="_blank">{{ review.user.name }}</a>
+                                    </div>
+                                    <span *ngFor="let i of [0, 1, 2, 3, 4, 5]">
+                                        <span *ngIf="i < review.rating" class="fa fa-star" style="color: orange;" ></span>
+                                    </span>
+                                    <span style="color:gray">&nbsp;{{ review.time_created }}</span>
+                                    <div>{{ review.text }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- The Modal -->
+<div class="modal fade" id="myModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title">Open hours</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <!-- Modal body -->
+            <div class="modal-body">
+                <table class="table" style="table-layout:fixed">
+                    <thead></thead>
+                    <tbody>
+                        <tr *ngFor="let day of openHourList; index as idx">
+                            <td *ngIf="idx == 0" style="width:50%"><b>{{ day[0] }}</b></td>
+                            <td *ngIf="idx == 0" style="width:50%"><b>{{ day[1] }}</b></td>
+                            <td *ngIf="idx != 0" style="width:50%">{{ day[0] }}</td>
+                            <td *ngIf="idx != 0" style="width:50%">{{ day[1] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

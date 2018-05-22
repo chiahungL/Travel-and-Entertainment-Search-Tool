@@ -1,0 +1,96 @@
+
+legend, label, .btn {
+    font-size: small;
+}
+
+.progress, .alert, .outputTable {
+    /* width: 70%;
+    margin-left: 15%; */
+    margin-top: 5%;
+}
+
+.col-centered {
+    float: none;
+    margin: 0 auto;
+}
+
+.btn-toolbar {
+    display: table;
+    margin: 0 auto;
+}
+
+.btn-light {
+    border: solid 1px #808080;
+}
+
+.btn-light:not(:hover) {
+    background: white;
+}
+
+.text-primary {
+    border: none !important;
+}
+
+.fa-star {
+    margin-right: -0.2em;
+}
+
+.details {
+    margin-top: 4%;
+}
+
+.tab-pane {
+    margin-top: 2%;
+}
+
+.card-columns {
+    column-count: 4;
+}
+
+/* test */
+.card-columns .card {
+    display: inline-block;
+    width:100%;
+}
+
+.myPhotoCard {
+    border: 1px solid lightgray;
+    padding: 2px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+}
+
+.myPhotoCol {
+    padding: 0 1%;
+}
+
+.card-body-photo {
+    padding: 0;
+}
+
+.reviewBtnBar {
+    margin-left: 0;
+}
+
+#myMap {
+    width: 100%;
+    height: 300px;
+}
+
+#pegman {
+    width: 30px;
+    padding: 0;
+}
+
+.dropdown-item:hover {
+    cursor: pointer;
+}
+
+.twitter {
+    padding: 0;
+    border-radius: 13%
+}
+
+.myTable-warning {
+    background-color: rgb(245, 219, 152);
+}

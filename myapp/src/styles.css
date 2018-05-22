@@ -1,0 +1,12 @@
+/* You can add global styles to this file, and also import other style files */
+/* .form-control.ng-touched.ng-pristine {
+    border: 2px solid red;
+} */
+@import url('https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css');
+/* @import url('https://use.fontawesome.com/releases/v5.0.9/css/all.css'); */
+
+.myalert {
+    color: red;
+    padding: 0;
+    margin: 0;
+}
