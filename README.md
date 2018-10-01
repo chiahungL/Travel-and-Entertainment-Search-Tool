@@ -1,5 +1,4 @@
 # Travel-and-Entertainment-Search-Tool
-CSCI 571 hw8
 
 ### Objectives
 * Get familiar with the AJAX and JSON technologies
